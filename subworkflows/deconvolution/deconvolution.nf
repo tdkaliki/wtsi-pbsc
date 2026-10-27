@@ -87,8 +87,8 @@ workflow DECONVOLUTION {
         .set { vireo_map }
 
         DONOR_ASSIGNMENT(vireo_map, sample_vcf)
-    }
-*/
+*/    }
+
   emit:
     fullBam_ch
     supplementaryBam_ch
