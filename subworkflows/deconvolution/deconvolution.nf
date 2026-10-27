@@ -37,7 +37,10 @@ workflow DECONVOLUTION {
     Channel.empty().set { fullBam_ch }
     Channel.empty().set { supplementaryBam_ch }
     Channel.empty().set { nosupplementaryBam_ch }
-    for_deconv.count().view { count -> "Number of samples for deconvolution: ${count}" }
+    dec_count = for_deconv.count()
+    if (dec_count > 0) {
+      for_deconv.count().view { count -> "Number of samples for deconvolution: ${count}" }
+    }
 
 /*
     if (for_deconv.count()>0) {
