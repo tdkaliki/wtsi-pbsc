@@ -2,6 +2,7 @@
 
 process MPILEUP {
     label 'mpileup'
+    container "/software/hgi/containers/yascp/yascp.cog.sanger.ac.uk-public-yascp_qc_jan_2025.sif"
     publishDir "${params.results_output}deconvolution/mpileup", mode: 'copy'
 
     input:
@@ -24,6 +25,7 @@ process MPILEUP {
 
 process SUBSET_VCF {
     label 'subset_vcf'
+    container "/software/hgi/containers/yascp/yascp.cog.sanger.ac.uk-public-yascp_qc_jan_2025.sif"
     publishDir "${params.results_output}deconvolution/mpileup", mode: 'copy'
 
     input:
