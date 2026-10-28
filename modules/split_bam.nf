@@ -13,7 +13,7 @@ process SPLIT_BAM_SINTO {
     script:
     """
     sinto filterbarcodes -b ${bam} -c ${barcode_list} -p ${task.cpus} --outdir split_bam
-    all_barcode_groups=\$(zcut -f 2 ${barcode_list} | sort | uniq)
+    all_barcode_groups=\$(zcat ${barcode_list} | cut -f 2 | sort | uniq)
     mkdir -p split_bam/supplementary split_bam/nosupplementary
     for barcode_group in \${all_barcode_groups}; do
 
