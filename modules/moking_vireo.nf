@@ -5,8 +5,8 @@ process MOKING_VIREO {
     input:
         tuple val(sample_id), path(bam), path(bam_bai), path(barcodes), path(input_vcf)
     output:
-        tuple val(sample_id), path("vireo__${sample_id}/GT_donors.vireo.vcf.gz"), emit: sample_donor_vcf//, path("vireo__${sample_id}/GT_donors.vireo.vcf.gz.csi"), emit: sample_donor_vcf
-        tuple val(sample_id), path("vireo__${sample_id}/donor_ids.tsv"), emit: sample_donor_ids
+        tuple val(sample_id), path("GT_donors.vireo.vcf.gz"), emit: sample_donor_vcf//, path("vireo__${sample_id}/GT_donors.vireo.vcf.gz.csi"), emit: sample_donor_vcf
+        tuple val(sample_id), path("donor_ids.tsv"), emit: sample_donor_ids
 
     script:
     """
