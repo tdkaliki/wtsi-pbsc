@@ -64,7 +64,15 @@ workflow DECONVOLUTION {
         MPILEUP_ND(not_for_deconv, params.genome_fasta_f)
         SUBSET_VCF_ND(MPILEUP.out, params.subset_regions_bed)
         MOKING_VIREO(SUBSET_VCF_ND.out)
-        
+        sample_vcf= VIREO.out.sample_donor_vcf.mix(MOKING_VIREO.out.sample_donor_vcf)
+        sample_donor_ids=VIREO.out.sample_donor_ids.mix(MOKING_VIREO.out.sample_donor_ids)
+        sample_donor_ids.collectFile(name: 'vireo_map.tsv', newLine: true) { sample_id, file_path ->
+          "${sample_id}\t${file_path}"
+        }
+        .set { vireo_map }
+
+        DONOR_ASSIGNMENT(vireo_map, sample_vcf)
+
         //SUBSET_VCF_ND.out.map{ experiment, bam, bai, barcodes, vcf -> [experiment, vcf] }.set{nd_vcfs}
         //nd_vcfs.view { experiment, vcf -> "VCF for ${experiment} is ${vcf}" }
 /*
