@@ -2,6 +2,7 @@ include {DONOR_ASSIGNMENT} from '../donor_assignment/donor_assignment.nf'
 include { MPILEUP; MPILEUP as MPILEUP_ND; CELLSNP; VIREO; SUBSET_VCF; SUBSET_VCF as SUBSET_VCF_ND }  from '../../modules/deconvolution.nf'
 //include {GET_BARCODES; SPLIT_BAM; INDEX_SPLIT_BAM} from '../../modules/split_bam.nf'
 include {SPLIT_BAM_SINTO; INDEX_SPLIT_BAM; INDEX_SPLIT_BAM as INDEX_SPLIT_BAM_SUPPLEMENTARY; INDEX_SPLIT_BAM as INDEX_SPLIT_BAM_NOSUPPLEMENTARY} from '../../modules/split_bam.nf'
+include {MOKING_VIREO} from '../../modules/moking_vireo.nf'
 
 workflow DECONVOLUTION {
   take:
@@ -62,8 +63,10 @@ workflow DECONVOLUTION {
     if (params.run_gtcheck== 'TRUE' || params.run_barcode_check == 'TRUE') {
         MPILEUP_ND(not_for_deconv, params.genome_fasta_f)
         SUBSET_VCF_ND(MPILEUP.out, params.subset_regions_bed)
-        SUBSET_VCF_ND.out.map{ experiment, bam, bai, barcodes, vcf -> [experiment, vcf] }.set{nd_vcfs}
-        nd_vcfs.view { experiment, vcf -> "VCF for ${experiment} is ${vcf}" }
+        MOKING_VIREO(SUBSET_VCF_ND.out)
+        
+        //SUBSET_VCF_ND.out.map{ experiment, bam, bai, barcodes, vcf -> [experiment, vcf] }.set{nd_vcfs}
+        //nd_vcfs.view { experiment, vcf -> "VCF for ${experiment} is ${vcf}" }
 /*
         if (for_deconv.count()>0) {
           sample_vcf=nd_vcfs.mix(VIREO.out.sample_donor_vcf)
