@@ -62,7 +62,7 @@ workflow DECONVOLUTION {
     nosupplementaryBam_ch = INDEX_SPLIT_BAM_NOSUPPLEMENTARY.out.donor_bams
     if (params.run_gtcheck== 'TRUE' || params.run_barcode_check == 'TRUE') {
         MPILEUP_ND(not_for_deconv, params.genome_fasta_f)
-        SUBSET_VCF_ND(MPILEUP.out, params.subset_regions_bed)
+        SUBSET_VCF_ND(MPILEUP_ND.out, params.subset_regions_bed)
         MOKING_VIREO(SUBSET_VCF_ND.out)
         sample_vcf= VIREO.out.sample_donor_vcf.mix(MOKING_VIREO.out.sample_donor_vcf)
         sample_donor_ids=VIREO.out.sample_donor_ids.mix(MOKING_VIREO.out.sample_donor_ids)
