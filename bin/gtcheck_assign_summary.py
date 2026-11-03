@@ -277,7 +277,9 @@ class AssignmentTables:
 
             oufh.write(oustr + '\n')
             print(oustr)
-        return pd.DataFrame(df).T
+        # build from records with explicit columns: pd.DataFrame(dict_of_dicts).T sorts columns alphabetically when there is a single donor
+        columns = ['donor_query','donor_gt','score0','score1','score_n','n','mean','sd','z0','z1','final_panel']
+        return pd.DataFrame(list(df.values()), columns=columns)
 
 if __name__ == '__main__':
 
