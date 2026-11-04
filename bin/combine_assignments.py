@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import csv
 import glob
 import re
 import sys
@@ -32,9 +33,10 @@ def combine_per_panel(not_assigned, z_thresh, z_dist_thresh):
 
 def combine_overall():
     not_assigned=[]
+    columns=['donor_query','donor_gt','score0','score1','score_n','n','mean','sd','z0','z1','final_panel']
     file_list=glob.glob('stats_*_gt_donor_assignments.csv')
     with open ("combined_gt_donor_assignments_overall.csv", "w") as fout:
-        fout.write('pool,donor_query,donor_gt,score0,score1,score_n,n,mean,sd,z0,z1,final_panel\n')
+        fout.write('pool,'+','.join(columns)+'\n')
         pattern = re.compile(r"^stats_(.+?)_gt_donor_assignments\.csv$")
         for file_name in file_list:
             print(file_name)
@@ -42,11 +44,11 @@ def combine_overall():
             pool_id = m.group(1)
             print(pool_id)
             with open (file_name, "r") as fin:
-                next(fin)
-                for line in fin:
-                    fout.write(pool_id+","+line)
-                    if line.strip().split(",")[-1]=="NONE":
-                        not_assigned.append(pool_id+","+line.split(",")[0])
+                # read by header name so column order in the input file does not matter
+                for row in csv.DictReader(fin):
+                    fout.write(pool_id+","+",".join(row[c] for c in columns)+"\n")
+                    if row['final_panel']=="NONE":
+                        not_assigned.append(pool_id+","+row['donor_query'])
     return not_assigned
 def main ():
     z_thresh = float(sys.argv[1])

@@ -9,6 +9,11 @@ import statistics
 import pandas as pd
 
 VERBOSE = True
+DEBUG = True  # set to False to silence the data-transformation trace below
+
+def dbg(*args):
+    if DEBUG:
+        print("[DEBUG]", *args, file=sys.stderr)
 
 
 nargs = len(sys.argv)
@@ -47,14 +52,22 @@ class AssignmentTables:
             sys.exit("ERROR: unexpected input file name '{:s}'.".format(infn))
         panel = fm.group(2)
         infh = open(infn, 'r')
-        for row in csv.DictReader(infh):
+        reader = csv.DictReader(infh)
+        dbg("=== STEP 1: reading", infn, "-> panel:", panel)
+        dbg("    input header:", reader.fieldnames)
+        for row in reader:
             ctr += 1
+            dbg("    raw row:", dict(row))
             donor_id = row['donor_query']
             if donor_id not in self.donors:
                 self.donors.append(donor_id)
                 # donor_query,donor_gt,score0,score1,score_n,n,mean,sd,z0,z1
             tabd[row['donor_query']] = (row['donor_gt'], row['score0'], row['score1'], row['z0'], row['z1'], row['score_n'],row['n'],row['mean'],row['sd'])
         infh.close()
+        dbg("=== STEP 2: parsed tuples for panel", panel,
+            "(order: donor_gt, score0, score1, z0, z1, score_n, n, mean, sd)")
+        for d, t in tabd.items():
+            dbg("    ", d, "->", t)
         self.panels[panel] = tabd
         return ctr
 
@@ -256,6 +269,10 @@ class AssignmentTables:
             if final_panel is None:
                 final_panel = 'NONE'
             oustr = "{:s},{:s},{:s}".format(donor, final_assignment, final_panel)
+            dbg("=== STEP 3: donor", donor, "-> final_assignment:", final_assignment,
+                "final_panel:", final_panel, "n_assignments:", n_assignments)
+            if final_panel != 'NONE':
+                dbg("    source tuple:", self.panels[final_panel][donor])
 
             if(final_panel=='NONE'):
                 print('panel is none')
@@ -275,11 +292,17 @@ class AssignmentTables:
                 'final_panel':final_panel}
 
 
+            dbg("    record built:", df[donor])
             oufh.write(oustr + '\n')
             print(oustr)
         # build from records with explicit columns: pd.DataFrame(dict_of_dicts).T sorts columns alphabetically when there is a single donor
         columns = ['donor_query','donor_gt','score0','score1','score_n','n','mean','sd','z0','z1','final_panel']
-        return pd.DataFrame(list(df.values()), columns=columns)
+        dbg("=== STEP 4: dict of records before DataFrame (n donors =", len(df), ")")
+        dbg("    old method pd.DataFrame(df).T would give columns:", list(pd.DataFrame(df).T.columns))
+        result = pd.DataFrame(list(df.values()), columns=columns)
+        dbg("    new method gives columns:", list(result.columns))
+        dbg("    DataFrame:\n" + result.to_string())
+        return result
 
 if __name__ == '__main__':
 
@@ -291,6 +314,9 @@ if __name__ == '__main__':
     oufh = open(oufn, 'w')
     donor_panels_and_stats = asstab.assign_donors(oufh)
     donor_panels_and_stats.to_csv(f'stats_{oufn}',sep=',',index=False)
+    if DEBUG:
+        with open(f'stats_{oufn}') as fh:
+            dbg("=== STEP 5: written stats_" + oufn + ":\n" + fh.read())
     oufh.close()
 
     sys.exit()
