@@ -1,5 +1,5 @@
 include {DONOR_ASSIGNMENT} from '../donor_assignment/donor_assignment.nf'
-include { MPILEUP; MPILEUP as MPILEUP_ND; CELLSNP; VIREO; SUBSET_VCF; SUBSET_VCF as SUBSET_VCF_ND }  from '../../modules/deconvolution.nf'
+include { MPILEUP; MPILEUP as MPILEUP_ND; CELLSNP; VIREO; SUBSET_VCF; SUBSET_VCF as SUBSET_VCF_ND; CHECK_VIREO }  from '../../modules/deconvolution.nf'
 //include {GET_BARCODES; SPLIT_BAM; INDEX_SPLIT_BAM} from '../../modules/split_bam.nf'
 include {SPLIT_BAM_SINTO; INDEX_SPLIT_BAM; INDEX_SPLIT_BAM as INDEX_SPLIT_BAM_SUPPLEMENTARY; INDEX_SPLIT_BAM as INDEX_SPLIT_BAM_NOSUPPLEMENTARY} from '../../modules/split_bam.nf'
 include {MOKING_VIREO} from '../../modules/moking_vireo.nf'
@@ -42,6 +42,7 @@ workflow DECONVOLUTION {
 
     sampleNames_cellsnp_nrDons = CELLSNP.out.combine(sampleNames_nrDons, by: 0)
     VIREO(sampleNames_cellsnp_nrDons)
+    CHECK_VIREO(VIREO.out.vireo_results)
     mapped_reads = mapped_reads.combine(VIREO.out.barcode_list, by: 0)
     SPLIT_BAM_SINTO(mapped_reads)
 

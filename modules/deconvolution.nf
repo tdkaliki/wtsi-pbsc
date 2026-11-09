@@ -82,7 +82,7 @@ process VIREO {
     output:
         tuple val(sample_id), path("barcodes__*.tsv"), emit: barcodes_tuple
         tuple val(sample_id), path("${sample_id}.bc_list.txt.gz"), emit: barcode_list
-        path("vireo__${sample_id}"), emit: vireo_results
+        tuple val(sample_id), path("vireo__${sample_id}"), emit: vireo_results
         tuple val(sample_id), path("vireo__${sample_id}/GT_donors.vireo.vcf.gz"), emit: sample_donor_vcf//, path("vireo__${sample_id}/GT_donors.vireo.vcf.gz.csi"), emit: sample_donor_vcf
         tuple val(sample_id), path("vireo__${sample_id}/donor_ids.tsv"), emit: sample_donor_ids
 
@@ -104,3 +104,61 @@ process VIREO {
     """
 }
 
+process CHECK_VIREO {
+    label 'deconvolution'
+
+    container "/software/hgi/containers/yascp/yascp.cog.sanger.ac.uk-public-yascp_qc_jan_2025.sif"    
+
+    input:
+        tuple val(sample_id),path(vireo_dir)
+    output:
+        tuple val(sample_id), path("${sample_id}_qc.tsv"), emit: check_res
+
+    script:
+    """
+        cat <<-EOF >  pairs.awk
+        function norm(gt,   a, n) {            # 1|0 and 0/1 count as the same genotype
+            gsub(/\\|/, "/", gt)
+            n = split(gt, a, "/")
+            if (n == 2 && a[1] > a[2]) gt = a[2] "/" a[1]
+            return gt
+        }
+        BEGIN {
+            FS = "\\t"; OFS = "\\t"
+            ns = split(names, nm, ",")
+        }
+        {
+            for (i = 1; i <= ns; i++) {
+                gt[i] = \$(2*i - 1)
+                dp[i] = \$(2*i)
+                ok[i] = (gt[i] !~ /\\./ && dp[i] != "." && dp[i] + 0 >= mindp)
+                if (ok[i]) gt[i] = norm(gt[i])
+            }
+            for (i = 1; i < ns; i++) {
+                if (!ok[i]) continue
+                for (j = i + 1; j <= ns; j++) {
+                    if (!ok[j]) continue
+                    key = i SUBSEP j
+                    n[key]++
+                    if (gt[i] != gt[j]) d[key]++
+                }
+            }
+        }
+        END {
+            print "sample1", "sample2", "sites_dp", "sites_diff_gt"
+            for (i = 1; i < ns; i++)
+                for (j = i + 1; j <= ns; j++) {
+                    key = i SUBSEP j
+                    print nm[i], nm[j], n[key]+0, d[key]+0
+                }
+        }
+        EOF
+
+        names=\$(bcftools query -l ${vireo_dir}/GT_donors.vireo.vcf.gz | paste -sd,)
+
+        bcftools query -f '[%GT\t%DP\t]\n' ${vireo_dir}/GT_donors.vireo.vcf.gz \
+        | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
+
+        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv -o ${sample_id}_qc.tsv
+    """
+}
