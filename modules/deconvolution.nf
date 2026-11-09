@@ -116,7 +116,7 @@ process CHECK_VIREO {
 
     script:
     """
-        cat <<-EOF >  pairs.awk
+        cat <<'EOF' > pairs.awk
         function norm(gt,   a, n) {            # 1|0 and 0/1 count as the same genotype
             gsub(/\\|/, "/", gt)
             n = split(gt, a, "/")
@@ -156,9 +156,9 @@ process CHECK_VIREO {
 
         names=\$(bcftools query -l ${vireo_dir}/GT_donors.vireo.vcf.gz | paste -sd,)
 
-        bcftools query -f '[%GT\t%DP\t]\n' ${vireo_dir}/GT_donors.vireo.vcf.gz \
-        | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
+        bcftools query -f '[%GT\\t%DP\\t]\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
 
         check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv -o ${sample_id}_qc.tsv
+
     """
 }
