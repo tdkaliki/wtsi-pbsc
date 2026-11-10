@@ -152,11 +152,11 @@ process CHECK_VIREO {
                     print nm[i], nm[j], n[key]+0, d[key]+0
                 }
         }
-        EOF
+EOF
 
         names=\$(bcftools query -l ${vireo_dir}/GT_donors.vireo.vcf.gz | paste -sd,)
 
-        bcftools query -f '[%GT\\t%DP\\t]\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
+        bcftools query -f '[%GT\\t%DP\\t]\\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
 
         check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv -o ${sample_id}_qc.tsv
 
