@@ -3,7 +3,8 @@
 process MPILEUP {
     label 'mpileup'
     container "/software/hgi/containers/yascp/yascp.cog.sanger.ac.uk-public-yascp_qc_jan_2025.sif"
-    publishDir "${params.results_output}deconvolution/mpileup", mode: 'copy'
+    publishDir "${params.results_output}deconvolution/mpileup", mode: 'copy',
+        saveAs: { filename -> (filename.endsWith('.bam') || filename.endsWith('.bai')) ? null : filename }
 
     input:
         tuple val(sample_id), path(bam), path(bam_bai)
@@ -26,7 +27,8 @@ process MPILEUP {
 process SUBSET_VCF {
     label 'subset_vcf'
     container "/software/hgi/containers/yascp/yascp.cog.sanger.ac.uk-public-yascp_qc_jan_2025.sif"
-    publishDir "${params.results_output}deconvolution/mpileup", mode: 'copy'
+    publishDir "${params.results_output}deconvolution/mpileup", mode: 'copy',
+        saveAs: { filename -> (filename.endsWith('.bam') || filename.endsWith('.bai')) ? null : filename }
 
     input:
         tuple val(sample_id), path(bam), path(bam_bai), path(sample_id__barcodes), path(sample_id__piled_up_reads)
@@ -112,7 +114,7 @@ process CHECK_VIREO {
     input:
         tuple val(sample_id),path(vireo_dir)
     output:
-        tuple val(sample_id), path("${sample_id}_qc.tsv"), emit: check_res
+        tuple val(sample_id), path("*_donors_check"), emit: check_res
 
     script:
     """
@@ -158,7 +160,7 @@ EOF
 
         bcftools query -f '[%GT\\t%DP\\t]\\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
 
-        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv -o ${sample_id}_qc.tsv
+        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv
 
     """
 }

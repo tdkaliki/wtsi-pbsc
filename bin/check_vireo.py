@@ -60,7 +60,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("donor_ids", help="Vireo donor_ids.tsv")
     p.add_argument("pairwise", help="pairwise_gt_diff.tsv")
-    p.add_argument("-o", "--output", default="donor_qc.tsv", help="output TSV (default: %(default)s)")
+    ##p.add_argument("-o", "--output", default="donor_qc.tsv", help="output TSV (default: %(default)s)")
     # p.add_argument("--min_cells", type=int, default=0,
     #                help="absolute minimum number of cells per donor (default: %(default)s = off)")
     # p.add_argument("--cell_fraction", type=float, default=0.1,
@@ -74,12 +74,20 @@ def main():
 
     gt_close=check_pairs(a.pairwise)
     fragment=check_donors(a.donor_ids, min_cells)
-    with open(a.output, "w", newline="") as out:
-        for key in fragment.keys():
-            if gt_close.get(key,0)>0 and fragment[key]=="fail":
-                out.write(key+" fail\n")
-            else:
-                out.write(key+" pass\n")
+    check=0
+    text=""
+    for key in fragment.keys():
+        if gt_close.get(key,0)>0 or fragment[key]=="fail":
+            text=text+key+" fail\n"
+            check+=1
+        else:
+            text=text+key+" pass\n"
+    if check > 0:
+        with open("failed_donors_check", "w", newline="") as out:
+            out.write(text)
+    else:
+        with open("passed_donors_check", "w", newline="") as out:
+            out.write(text)
 
 if __name__ == "__main__":
     main()
