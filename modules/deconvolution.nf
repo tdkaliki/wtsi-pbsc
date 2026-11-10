@@ -117,6 +117,11 @@ process CHECK_VIREO {
         tuple val(sample_id), path("*_donors_check"), emit: check_res
 
     script:
+    def args = []
+    if (params.check_vireo_min_cells != null) args << "--min_cells ${params.check_vireo_min_cells}"
+    if (params.check_vireo_min_sites != null) args << "--min_sites ${params.check_vireo_min_sites}"
+    def check_args = args.join(' ')
+    def min_dp = params.check_vireo_min_dp != null ? params.check_vireo_min_dp : 5
     """
         cat <<'EOF' > pairs.awk
         function norm(gt,   a, n) {            # 1|0 and 0/1 count as the same genotype
@@ -158,9 +163,9 @@ EOF
 
         names=\$(bcftools query -l ${vireo_dir}/GT_donors.vireo.vcf.gz | paste -sd,)
 
-        bcftools query -f '[%GT\\t%DP\\t]\\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=5 -f pairs.awk > pairwise_gt_diff.tsv
+        bcftools query -f '[%GT\\t%DP\\t]\\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=${min_dp} -f pairs.awk > pairwise_gt_diff.tsv
 
-        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv
+        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv ${check_args}
 
     """
 }

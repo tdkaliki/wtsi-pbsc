@@ -15,7 +15,7 @@ def check_donors(path, min_cells):
                 counts["all"]=counts.get("all",0)+1
         for key in counts.keys():
             if key != "all":
-                if min_cells:
+                if min_cells>0:
                     if counts[key]<100:
                         fragment[key]="fail"
                     else:
@@ -27,7 +27,7 @@ def check_donors(path, min_cells):
                         fragment[key]="pass"
     return fragment
 
-def check_pairs(path):
+def check_pairs(path, min_sites):
     gt_close={}
     usable = {}
     with open(path) as f:
@@ -37,7 +37,7 @@ def check_pairs(path):
             d2= line.split("\t")[1]
             donors=(d1, d2)
             sites = int(line.split("\t")[2])
-            if sites > 200:
+            if sites > min_sites:
                 frac = int(line.split("\t")[3])/sites
                 usable[donors]=frac
     if len (usable) >=3:
@@ -60,20 +60,20 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("donor_ids", help="Vireo donor_ids.tsv")
     p.add_argument("pairwise", help="pairwise_gt_diff.tsv")
+    p.add_argument("--min_cells", type=int, default=0,
+        help="absolute minimum number of cells per donor (default: %(default)s = off)")
+    p.add_argument("--min_sites", type=int, default=200, help="min sites for a usable pair (default: %(default)s)")
+
     ##p.add_argument("-o", "--output", default="donor_qc.tsv", help="output TSV (default: %(default)s)")
-    # p.add_argument("--min_cells", type=int, default=0,
-    #                help="absolute minimum number of cells per donor (default: %(default)s = off)")
     # p.add_argument("--cell_fraction", type=float, default=0.1,
     #                help="fail donors with cells < this fraction of the mean (default: %(default)s)")
-    # p.add_argument("--min_sites", type=int, default=200, help="min sites for a usable pair (default: %(default)s)")
     # p.add_argument("--min_pairs", type=int, default=3, help="min usable pairs to run the pair check (default: %(default)s)")
     # p.add_argument("--rel", type=float, default=0.60, help="relative cutoff vs median of other pairs (default: %(default)s)")
     # p.add_argument("--abs_cut", type=float, default=0.45, help="absolute fraction cutoff (default: %(default)s)")
-    min_cells = False
     a = p.parse_args()
 
-    gt_close=check_pairs(a.pairwise)
-    fragment=check_donors(a.donor_ids, min_cells)
+    gt_close=check_pairs(a.pairwise, a.min_sites)
+    fragment=check_donors(a.donor_ids, a.min_cells)
     check=0
     text=""
     for key in fragment.keys():

@@ -52,8 +52,10 @@ workflow DECONVOLUTION {
     passed_ids = vireo_check.passed.map { sid, f -> sid }
     failed_ids = vireo_check.failed.map { sid, f -> sid }
     failed_ids.view { sample_id -> "Sample ${sample_id} failed vireo check and will be excluded from downstream analysis." }
-    mapped_reads = mapped_reads.combine(VIREO.out.barcode_list, by: 0).join(passed_ids)
-    //mapped_reads = mapped_reads.join(passed_ids)
+    mapped_reads = mapped_reads.combine(VIREO.out.barcode_list, by: 0)
+    if (params.vireo_check=="TRUE"){
+      mapped_reads = mapped_reads.join(passed_ids)
+    }
     mapped_reads.view { sample_id, bam, bai -> "Sample ${sample_id} passed vireo check files ${bam}, ${bai}." }
     SPLIT_BAM_SINTO(mapped_reads)
 
@@ -76,8 +78,13 @@ workflow DECONVOLUTION {
         MPILEUP_ND(not_for_deconv, params.genome_fasta_f)
         SUBSET_VCF_ND(MPILEUP_ND.out, params.subset_regions_bed)
         MOKING_VIREO(SUBSET_VCF_ND.out)
+        if (params.vireo_check=="TRUE"){
         sample_vcf= VIREO.out.sample_donor_vcf.join(passed_ids).mix(MOKING_VIREO.out.sample_donor_vcf)
         sample_donor_ids=VIREO.out.sample_donor_ids.join(passed_ids).mix(MOKING_VIREO.out.sample_donor_ids)
+        }else{
+        sample_vcf= VIREO.out.sample_donor_vcf.mix(MOKING_VIREO.out.sample_donor_vcf)
+        sample_donor_ids=VIREO.out.sample_donor_ids.mix(MOKING_VIREO.out.sample_donor_ids)
+        }
         sample_vcf.view { sample_id, vcf -> "VCF for ${sample_id} is ${vcf}" }
         sample_donor_ids.view { sample_id, file_path -> "Donor IDs for ${sample_id} are in ${file_path}" }
         sample_donor_ids.collectFile(name: 'vireo_map.tsv', newLine: true) { sample_id, file_path ->
