@@ -54,7 +54,7 @@ workflow DECONVOLUTION {
     failed_ids.view { sample_id -> "Sample ${sample_id} failed vireo check and will be excluded from downstream analysis." }
     //mapped_reads = mapped_reads.combine(VIREO.out.barcode_list, by: 0).join(passed_ids)
     mapped_reads = mapped_reads.join(passed_ids)
-    mapped_reads.view { sample_id, bam, bai -> "Sample ${sample_id} passed vireo check and will be included in downstream analysis." }
+    mapped_reads.view { sample_id, bam, bai -> "Sample ${sample_id} passed vireo check files ${bam}, ${bai}." }
     SPLIT_BAM_SINTO(mapped_reads)
 
     donor_bams = SPLIT_BAM_SINTO.out.donor_bams.flatMap { val, paths ->
