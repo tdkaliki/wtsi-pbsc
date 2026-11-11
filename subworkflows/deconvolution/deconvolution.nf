@@ -56,7 +56,7 @@ workflow DECONVOLUTION {
     if (params.vireo_check=="TRUE"){
       mapped_reads = mapped_reads.join(passed_ids)
     }
-    mapped_reads.view { sample_id, bam, bai -> "Sample ${sample_id} passed vireo check files ${bam}, ${bai}." }
+    mapped_reads.view { sample_id, bam, bai, barcodes -> "Sample ${sample_id} passed vireo check files ${bam}, ${bai}, ${barcodes}." }
     SPLIT_BAM_SINTO(mapped_reads)
 
     donor_bams = SPLIT_BAM_SINTO.out.donor_bams.flatMap { val, paths ->
