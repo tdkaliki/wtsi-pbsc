@@ -1,5 +1,5 @@
 include {DONOR_ASSIGNMENT} from '../donor_assignment/donor_assignment.nf'
-include { MPILEUP; MPILEUP as MPILEUP_ND; CELLSNP; VIREO; SUBSET_VCF; SUBSET_VCF as SUBSET_VCF_ND; CHECK_VIREO }  from '../../modules/deconvolution.nf'
+include { MPILEUP; MPILEUP as MPILEUP_ND; CELLSNP; VIREO; SUBSET_VCF; SUBSET_VCF as SUBSET_VCF_ND; CHECK_VIREO; COMBINE_FAILED_POOLS }  from '../../modules/deconvolution.nf'
 //include {GET_BARCODES; SPLIT_BAM; INDEX_SPLIT_BAM} from '../../modules/split_bam.nf'
 include {SPLIT_BAM_SINTO; INDEX_SPLIT_BAM; INDEX_SPLIT_BAM as INDEX_SPLIT_BAM_SUPPLEMENTARY; INDEX_SPLIT_BAM as INDEX_SPLIT_BAM_NOSUPPLEMENTARY} from '../../modules/split_bam.nf'
 include {MOKING_VIREO} from '../../modules/moking_vireo.nf'
@@ -33,8 +33,6 @@ workflow DECONVOLUTION {
     combined_ch_deconv =  mapped_reads.combine(sampleNames_nrDons, by: 0)
     combined_ch_deconv.filter { experiment, bam, bai, npooled -> npooled == '1' }.map { experiment, bam, bai, _ -> [experiment, bam, bai] }.set{not_for_deconv}
     combined_ch_deconv.filter { experiment, bam, bai, npooled -> npooled != '1' }.map { experiment, bam, bai, _ -> [experiment, bam, bai] }.set{for_deconv}
-    for_deconv.view { experiment, bam, bai -> "Deconvolution will be performed on ${experiment} with bam: ${bam} and bai: ${bai}" }
-    not_for_deconv.view { experiment, bam, bai -> "Deconvolution will NOT be performed on ${experiment} with bam: ${bam} and bai: ${bai}" }
 
     MPILEUP(for_deconv, params.genome_fasta_f)
     SUBSET_VCF(MPILEUP.out, params.subset_regions_bed)
@@ -42,21 +40,21 @@ workflow DECONVOLUTION {
 
     sampleNames_cellsnp_nrDons = CELLSNP.out.combine(sampleNames_nrDons, by: 0)
     VIREO(sampleNames_cellsnp_nrDons)
-    CHECK_VIREO(VIREO.out.vireo_results)
-    CHECK_VIREO.out.check_res
-    .branch { sample_id, check_file ->
-        passed: check_file.name.startsWith('passed')
-        failed: check_file.name.startsWith('failed')
-    }
-    .set { vireo_check }
-    passed_ids = vireo_check.passed.map { sid, f -> sid }
-    failed_ids = vireo_check.failed.map { sid, f -> sid }
-    failed_ids.view { sample_id -> "Sample ${sample_id} failed vireo check and will be excluded from downstream analysis." }
     mapped_reads = mapped_reads.combine(VIREO.out.barcode_list, by: 0)
     if (params.vireo_check=="TRUE"){
-      mapped_reads = mapped_reads.join(passed_ids)
+        CHECK_VIREO(VIREO.out.vireo_results)
+        CHECK_VIREO.out.check_res
+        .branch { sample_id, check_file ->
+            passed: check_file.name.startsWith('passed')
+            failed: check_file.name.startsWith('failed')
+        }
+        .set { vireo_check }
+        passed_ids = vireo_check.passed.map { sid, f -> sid }
+        failed_ids = vireo_check.failed.map { sid, f -> f }
+        failed_ids = failed_ids.collect()
+        COMBINE_FAILED_POOLS(failed_ids)
+        mapped_reads = mapped_reads.join(passed_ids)
     }
-    mapped_reads.view { sample_id, bam, bai, barcodes -> "Sample ${sample_id} passed vireo check files ${bam}, ${bai}, ${barcodes}." }
     SPLIT_BAM_SINTO(mapped_reads)
 
     donor_bams = SPLIT_BAM_SINTO.out.donor_bams.flatMap { val, paths ->
@@ -79,14 +77,12 @@ workflow DECONVOLUTION {
         SUBSET_VCF_ND(MPILEUP_ND.out, params.subset_regions_bed)
         MOKING_VIREO(SUBSET_VCF_ND.out)
         if (params.vireo_check=="TRUE"){
-        sample_vcf= VIREO.out.sample_donor_vcf.join(passed_ids).mix(MOKING_VIREO.out.sample_donor_vcf)
-        sample_donor_ids=VIREO.out.sample_donor_ids.join(passed_ids).mix(MOKING_VIREO.out.sample_donor_ids)
+            sample_vcf= VIREO.out.sample_donor_vcf.join(passed_ids).mix(MOKING_VIREO.out.sample_donor_vcf)
+            sample_donor_ids=VIREO.out.sample_donor_ids.join(passed_ids).mix(MOKING_VIREO.out.sample_donor_ids)
         }else{
-        sample_vcf= VIREO.out.sample_donor_vcf.mix(MOKING_VIREO.out.sample_donor_vcf)
-        sample_donor_ids=VIREO.out.sample_donor_ids.mix(MOKING_VIREO.out.sample_donor_ids)
+            sample_vcf= VIREO.out.sample_donor_vcf.mix(MOKING_VIREO.out.sample_donor_vcf)
+            sample_donor_ids=VIREO.out.sample_donor_ids.mix(MOKING_VIREO.out.sample_donor_ids)
         }
-        sample_vcf.view { sample_id, vcf -> "VCF for ${sample_id} is ${vcf}" }
-        sample_donor_ids.view { sample_id, file_path -> "Donor IDs for ${sample_id} are in ${file_path}" }
         sample_donor_ids.collectFile(name: 'vireo_map.tsv', newLine: true) { sample_id, file_path ->
           "${sample_id}\t${file_path}"
         }

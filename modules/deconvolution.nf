@@ -165,7 +165,28 @@ EOF
 
         bcftools query -f '[%GT\\t%DP\\t]\\n' ${vireo_dir}/GT_donors.vireo.vcf.gz | awk -v names="\$names" -v mindp=${min_dp} -f pairs.awk > pairwise_gt_diff.tsv
 
-        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv ${check_args}
+        check_vireo.py ${vireo_dir}/donor_ids.tsv pairwise_gt_diff.tsv ${sample_id} ${check_args}
 
     """
 }
+
+process COMBINE_FAILED_POOLS{
+  label 'combine_donor_asignments'
+  publishDir  path: "${params.results_output}deconvolution/",
+          pattern: "pools_donor_count_mismatch.tsv",
+          mode: 'copy',
+          overwrite: "true"
+
+  input:
+    path files
+
+  output:
+    path("pools_donor_count_mismatch.tsv"), emit: problematic_pools
+
+  script:
+  """
+    cat failed_donors_check_* > pools_donor_count_mismatch.tsv
+
+  """
+}
+
