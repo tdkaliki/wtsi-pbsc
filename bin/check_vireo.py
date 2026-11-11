@@ -86,10 +86,10 @@ def main():
             check+=1
         text=text+a.pool_id+"\t"+key+"\t"+gtclose+"\t"+fragment[key]+"\n"
     if check > 0:
-        with open("failed_donors_check_" + a.pool_id, "w", newline="") as out:
+        with open("failed_"+ a.pool_id+"_donors_check" , "w", newline="") as out:
             out.write(text)
     else:
-        with open("passed_donors_check_" + a.pool_id, "w", newline="") as out:
+        with open("passed_"+ a.pool_id+"_donors_check" , "w", newline="") as out:
             out.write(text)
 
 if __name__ == "__main__":

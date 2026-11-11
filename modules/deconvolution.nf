@@ -185,7 +185,7 @@ process COMBINE_FAILED_POOLS{
 
   script:
   """
-    cat failed_donors_check_* > pools_donor_count_mismatch.tsv
+    cat *_donors_check > pools_donor_count_mismatch.tsv
 
   """
 }
